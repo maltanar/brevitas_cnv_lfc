@@ -1,7 +1,7 @@
 # BNN-PYNQ Brevitas experiments
 
 This repo contains training scripts and pretrained models to recreate the LFC and CNV models
-used in the [BNN-PYNQ](https://github.com/Xilinx/brevitas) repo using Brevitas.
+used in the [BNN-PYNQ](https://github.com/Xilinx/BNN-PYNQ) repo using [Brevitas](https://github.com/Xilinx/brevitas).
 These pretrained models and training scripts are courtesy of 
 [Alessandro Pappalardo](https://github.com/volcacius).
 
