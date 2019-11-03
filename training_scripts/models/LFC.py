@@ -2,6 +2,7 @@ from functools import reduce
 from operator import mul
 
 from torch.nn import Module, ModuleList, BatchNorm1d, Dropout
+import torch
 
 from .common import get_quant_linear, get_act_quant, get_quant_type, get_stats_op
 
@@ -46,8 +47,8 @@ class LFC(Module):
                                    stats_op=stats_op)
 
     def forward(self, x):
-        x = 2.0 * x - 1.0
         x = x.view(x.shape[0], -1)
+        x = 2.0 * x - torch.tensor([1.0])
         for mod in self.features:
             x = mod(x)
         out = self.fc(x)
