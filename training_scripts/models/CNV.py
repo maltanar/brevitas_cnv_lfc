@@ -1,3 +1,4 @@
+import torch
 from torch.nn import Module, ModuleList, BatchNorm2d, MaxPool2d, BatchNorm1d, Sequential
 
 from .common import get_quant_conv2d, get_quant_linear, get_act_quant, get_quant_type, get_stats_op
@@ -62,7 +63,7 @@ class CNV(Module):
                                    stats_op=stats_op)
 
     def forward(self, x):
-        x = 2.0 * x - 1.0
+        x = 2.0 * x - torch.tensor([1.0])
         for mod in self.conv_features:
             x = mod(x)
         x = x.view(x.shape[0], -1)
