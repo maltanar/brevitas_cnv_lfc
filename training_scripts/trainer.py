@@ -37,6 +37,7 @@ from logger import *
 from models.CNV import CNV
 from models.LFC import LFC
 from models.SFC import SFC
+from models.TFC import TFC
 
 
 def accuracy(output, target, topk=(1,)):
@@ -149,6 +150,12 @@ class Trainer(object):
                         in_ch=in_channels)
         elif config.network == 'SFC':
             model = SFC(weight_bit_width=config.weight_bit_width,
+                        act_bit_width=config.act_bit_width,
+                        in_bit_width=config.in_bit_width,
+                        num_classes=num_classes,
+                        in_ch=in_channels)
+        elif config.network == 'TFC':
+            model = TFC(weight_bit_width=config.weight_bit_width,
                         act_bit_width=config.act_bit_width,
                         in_bit_width=config.in_bit_width,
                         num_classes=num_classes,
