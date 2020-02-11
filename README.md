@@ -31,6 +31,10 @@ docker pull pytorch/pytorch:1.1.0-cuda10.0-cudnn7.5-devel
 
 | Name     | Input quantization           | Weight quantization | Activation quantization | Brevitas Top1 | Theano Top1 |
 |----------|------------------------------|---------------------|-------------------------|---------------|---------------|
+| TFC_1W1A | 1 bit                        | 1 bit               | 1 bit                   | 92.61%        |               |
+| TFC_1W2A | 2 bit                        | 1 bit               | 2 bit                   | 94.61%        |               |
+| SFC_1W1A | 1 bit                        | 1 bit               | 1 bit                   | 97.68%        |               |
+| SFC_1W2A | 2 bit                        | 1 bit               | 2 bit                   | 98.29%        |               |
 | LFC_1W1A | 1 bit                        | 1 bit               | 1 bit                   | 98.35%        | 98.35%        |
 | LFC_1W2A | 2 bit                        | 1 bit               | 2 bit                   | 98.88%        | 98.55%        |
 | CNV_1W1A | None (original [-1,1] 8 bit) | 1 bit               | 1 bit                   | 79.44%        | 79.54%        |
