@@ -28,7 +28,7 @@ from brevitas.core.scaling import ScalingImplType
 
 from trainer import Trainer
 
-parser = argparse.ArgumentParser(description="PyTorch CIFAR10/100 Training")
+parser = argparse.ArgumentParser(description="PyTorch MNIST/CIFAR10 Training")
 
 # Util method to add mutually exclusive boolean
 def add_bool_arg(parser, name, default):
@@ -68,14 +68,16 @@ parser.add_argument("--num_workers", default=4, type=int, help="Number of worker
 parser.add_argument("--gpus", type=none_or_str, default="0", help="Comma separated GPUs")
 
 # Optimizer hyperparams
-parser.add_argument("--batch_size", default=128, type=int, help="batch size")
-parser.add_argument("--lr", default=0.1, type=float, help="Learning rate")
-parser.add_argument("--scheduler", default="STEP", type=none_or_str, help="LR Scheduler")
+parser.add_argument("--batch_size", default=100, type=int, help="batch size")
+parser.add_argument("--lr", default=0.02, type=float, help="Learning rate")
+parser.add_argument("--optim", type=none_or_str, default="ADAM",help="Optimizer to use")
+parser.add_argument("--loss", type=none_or_str, default="SqrHinge",help="Loss function to use")
+parser.add_argument("--scheduler", default="FIXED", type=none_or_str, help="LR Scheduler")
 parser.add_argument("--milestones", type=none_or_str, default='100,150,200,250', help="Scheduler milestones")
 parser.add_argument("--momentum", default=0.9, type=float, help="Momentum")
-parser.add_argument("--weight_decay", default=5e-5, type=float, help="Weight decay")
-parser.add_argument("--epochs", default=500, type=int, help="Number of epochs")
-parser.add_argument("--random_seed", default=123456, type=int, help="Random seed")
+parser.add_argument("--weight_decay", default=0, type=float, help="Weight decay")
+parser.add_argument("--epochs", default=1000, type=int, help="Number of epochs")
+parser.add_argument("--random_seed", default=1, type=int, help="Random seed")
 
 # Neural network Architecture
 parser.add_argument("--network", default="LFC", type=none_or_str, help="neural network")

@@ -36,7 +36,7 @@ from torchvision.datasets import MNIST, CIFAR10
 from logger import *
 from models.CNV import CNV
 from models.LFC import LFC
-
+from models.losses import SqrHingeLoss
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -91,12 +91,12 @@ class Trainer(object):
                                      transforms.ToTensor()]
             transform_train = transforms.Compose(train_transforms_list)
             builder = CIFAR10
-            num_classes = 10
+            self.num_classes = 10
             in_channels = 3
         elif config.dataset == 'MNIST':
             transform_train = transform_to_tensor
             builder = MNIST
-            num_classes = 10
+            self.num_classes = 10
             in_channels = 1
             pass
         else:
@@ -138,13 +138,13 @@ class Trainer(object):
             model = CNV(weight_bit_width=config.weight_bit_width,
                         act_bit_width=config.act_bit_width,
                         in_bit_width=config.in_bit_width,
-                        num_classes=num_classes,
+                        num_classes=self.num_classes,
                         in_ch=in_channels)
         elif config.network == 'LFC':
             model = LFC(weight_bit_width=config.weight_bit_width,
                         act_bit_width=config.act_bit_width,
                         in_bit_width=config.in_bit_width,
-                        num_classes=num_classes,
+                        num_classes=self.num_classes,
                         in_ch=in_channels)
         else:
             raise Exception("Model not supported")
@@ -155,7 +155,10 @@ class Trainer(object):
         self.model = model
 
         # Loss function
-        self.criterion = nn.CrossEntropyLoss()
+        if config.loss == 'SqrHinge':
+            self.criterion = SqrHingeLoss()
+        else:
+            self.criterion = nn.CrossEntropyLoss()
         self.criterion = self.criterion.to(device=self.device)
 
         # Resume model, if any
@@ -166,10 +169,15 @@ class Trainer(object):
             self.model.load_state_dict(model_state_dict, strict=config.strict)
 
         # Init optimizer
-        self.optimizer = optim.SGD(self.model.parameters(),
-                                   lr=self.config.lr,
-                                   momentum=self.config.momentum,
-                                   weight_decay=self.config.weight_decay)
+        if config.optim == 'ADAM':     
+            self.optimizer = optim.Adam(self.model.parameters(),
+                                        lr=config.lr,
+                                        weight_decay=config.weight_decay)
+        elif config.optim == 'SGD':
+            self.optimizer = optim.SGD(self.model.parameters(),
+                                       lr=self.config.lr,
+                                       momentum=self.config.momentum,
+                                       weight_decay=self.config.weight_decay)
 
         # Resume optimizer, if any
         if config.resume and not config.evaluate:
@@ -180,6 +188,7 @@ class Trainer(object):
                 self.starting_epoch = package['epoch']
             if 'best_val_acc' in package.keys():
                 self.best_val_acc = package['best_val_acc']
+        
         # LR scheduler
         if config.scheduler == 'STEP':
             milestones = [int(i) for i in config.milestones.split(',')]
@@ -195,8 +204,8 @@ class Trainer(object):
         if config.resume and not config.evaluate and self.scheduler is not None:
             self.scheduler.last_epoch = package['epoch'] - 1
 
-    def checkpoint_best(self, epoch):
-        best_path = os.path.join(self.checkpoints_dir_path, "best.tar")
+    def checkpoint_best(self, epoch, name):
+        best_path = os.path.join(self.checkpoints_dir_path, name)
         self.logger.info("Saving checkpoint model to {}".format(best_path))
         torch.save({
             'state_dict': self.model.state_dict(),
@@ -228,18 +237,31 @@ class Trainer(object):
                 input = input.to(self.device, non_blocking=True)
                 target = target.to(self.device, non_blocking=True)
 
+                # for hingeloss only
+                if isinstance(self.criterion, SqrHingeLoss):        
+                    target=target.unsqueeze(1)
+                    target_onehot = torch.Tensor(target.size(0), self.num_classes).to(self.device, non_blocking=True)
+                    target_onehot.fill_(-1)
+                    target_onehot.scatter_(1, target, 1)
+                    target=target.squeeze()
+                    target_var = target_onehot
+                else:
+                    target_var = target
+
                 # measure data loading time
                 epoch_meters.data_time.update(time.time() - start_data_loading)
 
                 # Training batch starts
                 start_batch = time.time()
                 output = self.model(input)
-                loss = self.criterion(output, target)
+                loss = self.criterion(output, target_var)
 
                 # compute gradient and do SGD step
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+
+                self.model.clip_weights(-1,1)
 
                 # measure elapsed time
                 epoch_meters.batch_time.update(time.time() - start_batch)
@@ -257,16 +279,22 @@ class Trainer(object):
             # Set the learning rate
             if self.scheduler is not None:
                 self.scheduler.step(epoch)
+            else:
+                # Set the learning rate
+                if epoch%40==0:
+                    self.optimizer.param_groups[0]['lr'] *= 0.5
 
             # Perform eval
             with torch.no_grad():
                 top1avg = self.eval_model(epoch)
 
             # checkpoint
-            if top1avg > self.best_val_acc and not self.config.dry_run:
+            if top1avg >= self.best_val_acc and not self.config.dry_run:
                 self.best_val_acc = top1avg
-                self.checkpoint_best(epoch)
-
+                self.checkpoint_best(epoch, "best.tar")
+            elif not self.config.dry_run:
+                self.checkpoint_best(epoch, "checkpoint.tar")
+        
         # training ends
         if not self.config.dry_run:
             return os.path.join(self.checkpoints_dir_path, "best.tar")
@@ -285,7 +313,18 @@ class Trainer(object):
 
             input = input.to(self.device, non_blocking=True)
             target = target.to(self.device, non_blocking=True)
-
+            
+            # for hingeloss only
+            if isinstance(self.criterion, SqrHingeLoss):        
+                target=target.unsqueeze(1)
+                target_onehot = torch.Tensor(target.size(0), self.num_classes).to(self.device, non_blocking=True)
+                target_onehot.fill_(-1)
+                target_onehot.scatter_(1, target, 1)
+                target=target.squeeze()
+                target_var = target_onehot
+            else:
+                target_var = target
+            
             # compute output
             output = self.model(input)
 
@@ -294,10 +333,14 @@ class Trainer(object):
             end = time.time()
 
             #compute loss
-            loss = self.criterion(output, target)
+            loss = self.criterion(output, target_var)
             eval_meters.loss_time.update(time.time() - end)
 
-            prec1, prec5 = accuracy(output, target, topk=(1, 5))
+            pred = output.data.argmax(1, keepdim=True)
+            correct = pred.eq(target.data.view_as(pred)).sum()
+            prec1 = 100. * correct.float() / input.size(0)
+
+            _, prec5 = accuracy(output, target, topk=(1, 5))
             eval_meters.losses.update(loss.item(), input.size(0))
             eval_meters.top1.update(prec1.item(), input.size(0))
             eval_meters.top5.update(prec5.item(), input.size(0))

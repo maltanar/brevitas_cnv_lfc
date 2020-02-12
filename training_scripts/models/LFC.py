@@ -27,6 +27,7 @@ from torch.nn import Module, ModuleList, BatchNorm1d, Dropout
 import torch
 
 from .common import get_quant_linear, get_act_quant, get_quant_type, get_stats_op
+from brevitas.nn import QuantLinear, QuantHardTanh
 
 FC_OUT_FEATURES = [1024, 1024, 1024]
 INTERMEDIATE_FC_PER_OUT_CH_SCALING = True
@@ -61,17 +62,26 @@ class LFC(Module):
             self.features.append(BatchNorm1d(num_features=in_features))
             self.features.append(get_act_quant(act_bit_width, act_quant_type))
             self.features.append(Dropout(p=HIDDEN_DROPOUT))
-        self.fc = get_quant_linear(in_features=in_features,
+        self.features.append(get_quant_linear(in_features=in_features,
                                    out_features=num_classes,
                                    per_out_ch_scaling=LAST_FC_PER_OUT_CH_SCALING,
                                    bit_width=weight_bit_width,
                                    quant_type=weight_quant_type,
-                                   stats_op=stats_op)
+                                   stats_op=stats_op))
+        self.features.append(BatchNorm1d(num_features=num_classes))
 
+        for m in self.modules():
+          if isinstance(m, QuantLinear):
+            torch.nn.init.uniform_(m.weight.data, -1, 1)        
+
+    def clip_weights(self, min_val, max_val):
+        for mod in self.features:
+            if isinstance(mod, QuantLinear):
+                mod.weight.data.clamp_(min_val, max_val)
+    
     def forward(self, x):
         x = x.view(x.shape[0], -1)
-        x = 2.0 * x - torch.tensor([1.0])
+        x = 2.0 * x - torch.tensor([1.0]).type(x.type())
         for mod in self.features:
             x = mod(x)
-        out = self.fc(x)
-        return out
+        return x
