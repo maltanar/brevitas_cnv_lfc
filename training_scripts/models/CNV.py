@@ -42,8 +42,9 @@ POOL_SIZE = 2
 
 class CNV(Module):
 
-    def __init__(self, num_classes=10, weight_bit_width=None, act_bit_width=None,in_bit_width=None, in_ch=3):
+    def __init__(self, num_classes=10, weight_bit_width=None, act_bit_width=None,in_bit_width=None, in_ch=3, device="cpu"):
         super(CNV, self).__init__()
+        self.device = device
 
         weight_quant_type = get_quant_type(weight_bit_width)
         act_quant_type = get_quant_type(act_bit_width)
@@ -85,7 +86,7 @@ class CNV(Module):
                                    stats_op=stats_op)
 
     def forward(self, x):
-        x = 2.0 * x - torch.tensor([1.0])
+        x = 2.0 * x - torch.tensor([1.0]).to(self.device)
         for mod in self.conv_features:
             x = mod(x)
         x = x.view(x.shape[0], -1)

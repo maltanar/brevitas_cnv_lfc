@@ -38,8 +38,9 @@ HIDDEN_DROPOUT = 0.2
 class TFC(Module):
 
     def __init__(self, num_classes=10, weight_bit_width=None, act_bit_width=None,
-                 in_bit_width=None, in_ch=1, in_features=(28, 28)):
+                 in_bit_width=None, in_ch=1, in_features=(28, 28), device="cpu"):
         super(TFC, self).__init__()
+        self.device = device
 
         weight_quant_type = get_quant_type(weight_bit_width)
         act_quant_type = get_quant_type(act_bit_width)
@@ -70,7 +71,7 @@ class TFC(Module):
 
     def forward(self, x):
         x = x.view(x.shape[0], -1)
-        x = 2.0 * x - torch.tensor([1.0])
+        x = 2.0 * x - torch.tensor([1.0]).to(self.device)
         for mod in self.features:
             x = mod(x)
         out = self.fc(x)
