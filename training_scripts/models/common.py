@@ -85,6 +85,7 @@ def get_quant_linear(in_features, out_features, per_out_ch_scaling, bit_width, q
                        in_features=in_features,
                        out_features=out_features,
                        weight_quant_type=quant_type,
+                       weight_narrow_range=NARROW_RANGE_ENABLED,
                        weight_bit_width=bit_width,
                        weight_bit_width_impl_type=BIT_WIDTH_IMPL_TYPE,
                        weight_scaling_per_output_channel=per_out_ch_scaling,
