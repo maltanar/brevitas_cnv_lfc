@@ -47,8 +47,9 @@ POOL_SIZE = 2
 
 class CNV(Module):
 
-    def __init__(self, num_classes=10, weight_bit_width=None, act_bit_width=None, in_bit_width=None, in_ch=3):
+    def __init__(self, num_classes=10, weight_bit_width=None, act_bit_width=None, in_bit_width=None, in_ch=3, device="cpu"):
         super(CNV, self).__init__()
+        self.device = device
 
         weight_quant_type = get_quant_type(weight_bit_width)
         act_quant_type = get_quant_type(act_bit_width)
@@ -96,7 +97,7 @@ class CNV(Module):
         
         for m in self.modules():
           if isinstance(m, QuantConv2d) or isinstance(m, QuantLinear):
-            torch.nn.init.uniform_(m.weight.data, -1, 1)        
+            torch.nn.init.uniform_(m.weight.data, -1, 1)
 
 
     def clip_weights(self, min_val, max_val):
@@ -108,7 +109,7 @@ class CNV(Module):
                 mod.weight.data.clamp_(min_val, max_val)
 
     def forward(self, x):
-        x = 2.0 * x - torch.tensor([1.0]).type(x.type())
+        x = 2.0 * x - torch.tensor([1.0]).to(self.device)
         for mod in self.conv_features:
             x = mod(x)
         x = x.view(x.shape[0], -1)

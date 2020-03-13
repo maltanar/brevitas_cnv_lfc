@@ -36,6 +36,8 @@ from torchvision.datasets import MNIST, CIFAR10
 from logger import *
 from models.CNV import CNV
 from models.LFC import LFC
+from models.SFC import SFC
+from models.TFC import TFC
 from models.losses import SqrHingeLoss
 
 def accuracy(output, target, topk=(1,)):
@@ -139,12 +141,28 @@ class Trainer(object):
                         act_bit_width=config.act_bit_width,
                         in_bit_width=config.in_bit_width,
                         num_classes=self.num_classes,
-                        in_ch=in_channels)
+                        in_ch=in_channels,
+                        device=self.device,)
         elif config.network == 'LFC':
             model = LFC(weight_bit_width=config.weight_bit_width,
                         act_bit_width=config.act_bit_width,
                         in_bit_width=config.in_bit_width,
                         num_classes=self.num_classes,
+                        device=self.device,
+                        in_ch=in_channels)
+        elif config.network == 'SFC':
+            model = SFC(weight_bit_width=config.weight_bit_width,
+                        act_bit_width=config.act_bit_width,
+                        in_bit_width=config.in_bit_width,
+                        num_classes=self.num_classes,
+                        device=self.device,
+                        in_ch=in_channels)
+        elif config.network == 'TFC':
+            model = TFC(weight_bit_width=config.weight_bit_width,
+                        act_bit_width=config.act_bit_width,
+                        in_bit_width=config.in_bit_width,
+                        num_classes=self.num_classes,
+                        device=self.device,
                         in_ch=in_channels)
         else:
             raise Exception("Model not supported")
@@ -212,7 +230,7 @@ class Trainer(object):
             'optim_dict': self.optimizer.state_dict(),
             'epoch': epoch + 1,
             'best_val_acc': self.best_val_acc,
-            'config': self.config,
+            #'config': self.config,
         }, best_path)
 
     def train_model(self):
