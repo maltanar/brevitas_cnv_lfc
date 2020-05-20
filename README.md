@@ -1,5 +1,7 @@
 # BNN-PYNQ Brevitas experiments
 
+**This repo is no longer maintained. BNN-PYNQ examples are now maintained as part of Brevitas here: https://github.com/Xilinx/brevitas/tree/master/brevitas_examples/bnn_pynq**
+
 This repo contains training scripts and pretrained models to recreate the LFC and CNV models
 used in the [BNN-PYNQ](https://github.com/Xilinx/BNN-PYNQ) repo using [Brevitas](https://github.com/Xilinx/brevitas).
 These pretrained models and training scripts are courtesy of 
